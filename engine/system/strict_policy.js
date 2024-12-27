@@ -30,15 +30,38 @@ function check_number(number) {
 function check(sentence, command, type) {
     if (command == 'log') {
         if (type == 'string') {
+            let missed_concat = new String(sentence);
+            missed_concat = missed_concat.split('>>');
+            for (let i = 0; i < missed_concat.length; i++) {
+                while (missed_concat[i][0] == ' ') missed_concat[i] = missed_concat[i].slice(1);
+                while (missed_concat[i].at(-1) == ' ') missed_concat[i] = missed_concat[i].slice(0, missed_concat[i].length - 1);
+                if (missed_concat[i][0] == '"' && missed_concat[i].at(-1) == '"') {} // text
+                if (missed_concat[i].indexOf(' ') != -1) return [false, 's007_0'];
+            }
+
             sentence = sentence.replaceAll(' ', '').split('>>');
             for (let i = 0; i < sentence.length; i++) {
                 if (sentence[i][0] == '"' && sentence[i].at(-1) == '"') {} // "text"
                 else { // variable
-                    if (check_variable_name(sentence[i]) != '') return [false, 's006']
+                    if (check_variable_name(sentence[i]) != '') return [false, 's006_0'];
                 }
             }
+            
             return true;
         } else if (type == 'number') {
+            let missed_concat = new String(sentence);
+            missed_concat = missed_concat
+                .split('+')
+                .join('?')
+                .split('-')
+                .join('?')
+                .split('?');
+            for (let i = 0; i < missed_concat.length; i++) {
+                while (missed_concat[i][0] == ' ') missed_concat[i] = missed_concat[i].slice(1);
+                while (missed_concat[i].at(-1) == ' ') missed_concat[i] = missed_concat[i].slice(0, missed_concat[i].length - 1);
+                if (missed_concat[i].indexOf(' ') != -1) return [false, 's007_1'];
+            }
+
             sentence = sentence.replaceAll(' ', '')
                 .split('+')
                 .join('?')
@@ -51,6 +74,29 @@ function check(sentence, command, type) {
             }
             return true;
         } else return [false, 's001'];
+    } else if (command == 'set') {
+        sentence = sentence
+            .split('-')
+            .join('?')
+            .split('+')
+            .join('?')
+            .split('?');
+        
+        for (let i = 0; i < sentence.length; i++) {
+            while (sentence[i][0] == ' ') sentence[i] = sentence[i].slice(1);
+            while (sentence[i].at(-1) == ' ') sentence[i] = sentence[i].slice(
+                0,
+                sentence[i].length - 1
+            );
+
+            if (sentence[i][0] == '"' && sentence[i].at(-1) == '"') {} // text
+            else {
+                if (sentence[i].indexOf(' ') != -1) return [false, 's208'];
+                if (!(check_number(sentence[i]) != -1 || check_variable_name(sentence[i]) != -1)) return [false, 's207'];
+            }
+        }
+
+        return true;
     }
 
     return [false, undefined];
@@ -68,16 +114,19 @@ export default function strict_policy(line) {
             if (['number', 'string'].indexOf(line[1]) == -1) return [false, 's001'];
             return check(line.slice(2).join(' '), line[0], line[1]);
         case "new":
-            // #inwork
+            if (line.length != 3) return [false, 's104'];
+            if (['number', 'string'].indexOf(line.at(-1)) == -1) return [false, 's102'];
+            if (check_variable_name(line[1]) != '') return [false, 's105'];
             return true;
         case "set":
-            // #inwork
-            return true;
+            if (check_variable_name(line[1]) != '') return [false, 's207'];
+            return check(line.slice(2).join(' '), line[0]);
         case "delete":
-            // #inwork
+            if (line.length != 2) return [false, 's303'];
+            if (check_variable_name(line[1]) != '') return [false, 's304'];
             return true;
         case "start":
-            // #inwork
+            if (line.length != 1) return [false, 's401'];
             return true;
         case "if":
             // #inwork
@@ -86,10 +135,10 @@ export default function strict_policy(line) {
             // #inwork
             return true;
         case "else":
-            // #inwork
+            if (line.length != 1) return [false, 's701'];
             return true;
         case "finish":
-            // #inwork
+            if (line.length != 1) return [false, 's801']
             return true;
         case "loop":
             // #inwork
