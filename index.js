@@ -108,3 +108,187 @@ export default class Study_Script {
     return true;
   }
 }
+
+function translate(studyscript) {
+    const js = [];
+    const lines = studyscript.split('\n');
+    let indentLevel = 0;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue; // пропуск пустых строк и комментов
+
+        const parts = trimmed.split(' ');
+        const command = parts[0];
+        const indent = '  '.repeat(indentLevel); // отступ
+
+        switch (command) {
+            case 'start':
+            case 'delete':
+            case 'finish':
+                break;
+
+            case 'new':
+                if (parts.length >= 3) {
+                    js.push(`${indent}let ${parts[1]};`);
+                }
+                break;
+
+            case 'set':
+                if (parts.length >= 3) {
+                    const value = parts.slice(2).join(' ');
+                    js.push(`${indent}${parts[1]} = ${value};`);
+                }
+                break;
+
+            case 'log':
+                if (parts.length >= 3) {
+                    const value = parts.slice(2).join(' ');
+                    js.push(`${indent}console.log(${value});`);
+                }
+                break;
+
+            // if {
+            case 'if':
+                if (parts.length >= 2) {
+                    const condition = parts.slice(1).join(' ');
+                    js.push(`${indent}if (${condition}) {`);
+                    indentLevel++; // Увеличиваем отступ для тела if
+                }
+                break;
+
+            // loop -> while {
+            case 'loop':
+                if (parts.length >= 2) {
+                    const condition = parts.slice(1).join(' ');
+                    js.push(`${indent}while (${condition}) {`);
+                    indentLevel++; // Увеличиваем отступ для тела цикла
+                }
+                break;
+
+            // Закрытие блоков (if/loop) -> }
+            case 'close':
+            case 'end':
+                indentLevel = Math.max(0, indentLevel - 1); // Уменьшаем отступ
+                js.push(`${'  '.repeat(indentLevel)}}`);
+                break;
+
+            // Блок else -> } else {
+            case 'else':
+                indentLevel = Math.max(0, indentLevel - 1);
+                js.push(`${'  '.repeat(indentLevel)}} else {`);
+                indentLevel++;
+                break;
+
+            default:
+                js.push(`${indent}${trimmed}`);
+        }
+    }
+
+    return js.join('\n');
+}
+function reverseTranslate(javascriptCode) {
+    const lines = javascriptCode.split('\n');
+    const output = ['start'];
+    let loopCounter = 0;
+    const variables = new Set();
+
+    // Обработка объявлений переменных
+    function processDeclaration(line) {
+        const varMatch = line.match(/(let|var|const)\s+(\w+)\s*=\s*(.+);?/);
+        if (!varMatch) return false;
+
+        const [, , varName, value] = varMatch;
+        variables.add(varName);
+
+        // Определяем тип
+        let type = 'number';
+        if (value.includes('"') || value.includes("'") || value.includes('new String')) {
+            type = 'string';
+        }
+
+        output.push(`new ${varName} ${type}`);
+        output.push(`set ${varName} ${value.replace(/['"new String\(\)]/g, '').trim()}`);
+        return true;
+    }
+
+    // Обработка циклов
+    function processLoop(line) {
+        const whileMatch = line.match(/while\s*\((.+)\)\s*\{/);
+        if (!whileMatch) return false;
+
+        const condition = whileMatch[1];
+        output.push(`loop loop_${loopCounter} ${condition}`);
+        loopCounter++;
+        return true;
+    }
+
+    // Обработка условий
+    function processIf(line) {
+        const ifMatch = line.match(/if\s*\((.+)\)\s*\{/);
+        if (!ifMatch) return false;
+
+        output.push(`if ${ifMatch[1]}`);
+        return true;
+    }
+
+    // Обработка console.log
+    function processLog(line) {
+        const logMatch = line.match(/console\.log\((.+)\);?/);
+        if (!logMatch) return false;
+
+        const content = logMatch[1];
+        let type = 'number';
+        if (content.includes('"') || content.includes("'")) {
+            type = 'string';
+        }
+
+        output.push(`log ${type} ${content}`);
+        return true;
+    }
+
+    // Основной цикл обработки
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        // Пропускаем комментарии
+        if (line.startsWith('//')) {
+            output.push(`# ${line.substring(2).trim()}`);
+            continue;
+        }
+
+        // Обработка конструкций
+        if (processDeclaration(line)) continue;
+        if (processLoop(line)) continue;
+        if (processIf(line)) continue;
+        if (processLog(line)) continue;
+
+        // Обработка закрывающих скобок
+        if (line === '}') {
+            output.push('end');
+            continue;
+        }
+
+        // Обработка присваиваний
+        const assignmentMatch = line.match(/(\w+)\s*=\s*(.+);?/);
+        if (assignmentMatch && variables.has(assignmentMatch[1])) {
+            output.push(`set ${assignmentMatch[1]} ${assignmentMatch[2]}`);
+            continue;
+        }
+
+        // Если не распознано, оставляем как есть
+        output.push(`# ${line}`);
+    }
+
+    // Добавляем delete для всех переменных
+    variables.forEach(varName => {
+        output.push(`delete ${varName}`);
+    });
+
+    output.push('finish');
+    return output.join('\n');
+}
+
+
+console.log(reverseTranslate(code));
