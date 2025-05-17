@@ -44,11 +44,11 @@ The planned commercial development of the project and the functional development
 - [ ] creating examples of simulating fundamental functions and operators
 - [x] creating a library of basic programming tasks
 - [ ] adding syntax highlighting extension to `VSCode`, `SublimeText`
-- [ ] publishing the compiler for public use
-- [ ] creating an educational platform using `Study Script`
+- [x] publishing the compiler for public use
+- [x] creating an [educational platform](https://studyscript.ru) using `Study Script`
 
 ## 2025 (H2):
 
-- [ ] creating a code translator `Study Script` <-> `JavaScript`
+- [x] creating a code translator `Study Script` <-> `JavaScript`
 - [ ] adding documentation in English (+), Chinese (-), Spanish (-), Arabic (-), Portuguese (-), Russian (+), German (-), French (-), Japanese (-), Korean (-)
 - [ ] creating a visual an animator of step-by-step code execution (in the format of a video / set of images or an interactive website)
